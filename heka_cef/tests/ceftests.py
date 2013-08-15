@@ -11,13 +11,13 @@
 #   Victor Ng (vng@mozilla.com)
 #
 # ***** END LICENSE BLOCK *****
-from metlog.client_ext import log_cef
+from heka.client_ext import log_cef
 import unittest
 from cef import logger
 
-from metlog.client import MetlogClient
-from metlog.senders import DebugCaptureSender
-from metlog.client import setup_client
+from heka.client import HekaClient
+from heka.senders import DebugCaptureSender
+from heka.client import setup_client
 
 try:
     import simplejson as json
@@ -27,16 +27,16 @@ except ImportError:
 
 class TestClientSetup(unittest.TestCase):
     def test_setup(self):
-        simple_client = setup_client('metlog.senders.DebugCaptureSender')
-        assert isinstance(simple_client, MetlogClient)
+        simple_client = setup_client('heka.senders.DebugCaptureSender')
+        assert isinstance(simple_client, HekaClient)
         assert isinstance(simple_client.sender, DebugCaptureSender)
 
     def test_setup_extensions(self):
         simple_client = setup_client( \
-                'metlog.senders.DebugCaptureSender',
-                extensions={'cef': 'metlog.client_ext.log_cef'})
+                'heka.senders.DebugCaptureSender',
+                extensions={'cef': 'heka.client_ext.log_cef'})
 
-        assert isinstance(simple_client, MetlogClient)
+        assert isinstance(simple_client, HekaClient)
         assert isinstance(simple_client.sender, DebugCaptureSender)
         #assert simple_client.sender._kwargs == {'foo': 'bar'}
         assert hasattr(simple_client, 'cef')
@@ -45,8 +45,8 @@ class TestClientSetup(unittest.TestCase):
 class TestBasicProxy(unittest.TestCase):
     def test_double_overload(self):
         self.logger = setup_client(\
-                'metlog.senders.DebugCaptureSender',
-                extensions={'cef': 'metlog.client_ext.log_cef'})
+                'heka.senders.DebugCaptureSender',
+                extensions={'cef': 'heka.client_ext.log_cef'})
 
         try:
             self.logger.add_method('cef', log_cef)
@@ -71,8 +71,8 @@ class TestCEFLogger(unittest.TestCase):
                        'cef': True}
 
         self.logger = setup_client(\
-                'metlog.senders.DebugCaptureSender',
-                extensions={'cef': 'metlog.client_ext.log_cef'})
+                'heka.senders.DebugCaptureSender',
+                extensions={'cef': 'heka.client_ext.log_cef'})
 
         self._warn = []
 
@@ -86,7 +86,7 @@ class TestCEFLogger(unittest.TestCase):
         logger.warning = self.old_logger
 
     def _log(self, name, severity, *args, **kw):
-        # Capture the output from metlog and clear the internal debug buffer
+        # Capture the output from heka and clear the internal debug buffer
         self.logger.cef(name, severity, self.environ, self.config, *args, **kw)
         msgs = self.logger.sender.msgs
 

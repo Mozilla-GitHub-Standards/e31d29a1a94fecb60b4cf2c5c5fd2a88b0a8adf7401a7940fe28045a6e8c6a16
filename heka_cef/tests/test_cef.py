@@ -11,29 +11,29 @@
 #   Victor Ng (vng@mozilla.com)
 #
 # ***** END LICENSE BLOCK *****
-from metlog.config import client_from_text_config
-import metlog_cef
+from heka.config import client_from_text_config
+import heka_cef
 import unittest
 import json
 from cef import logger
 from nose.tools import raises, eq_
-from metlog_cef.cef_plugin import InvalidArgumentError
+from heka_cef.cef_plugin import InvalidArgumentError
 
 
-class TestMetlog(unittest.TestCase):
+class TestHeka(unittest.TestCase):
     logger = 'tests'
 
     def setUp(self):
 
         cfg_txt = """
-        [metlog]
-        sender_class = metlog.senders.DebugCaptureSender
+        [heka]
+        stream_class = heka.senders.DebugCaptureSender
 
-        [metlog_plugin_cef]
-        provider=metlog_cef.cef_plugin:config_plugin
+        [heka_plugin_cef]
+        provider=heka_cef.cef_plugin:config_plugin
         """
         ###
-        self.client = client_from_text_config(cfg_txt, 'metlog')
+        self.client = client_from_text_config(cfg_txt, 'heka')
 
         self.environ = {'REMOTE_ADDR': '127.0.0.1', 'HTTP_HOST': '127.0.0.1',
                         'PATH_INFO': '/', 'REQUEST_METHOD': 'GET',
@@ -58,11 +58,13 @@ class TestMetlog(unittest.TestCase):
         assert hasattr(self.client, 'cef')
 
     def _log(self, name, severity, *args, **kw):
-        # Capture the output from metlog and clear the internal debug buffer
+        # Capture the output from heka and clear the internal debug buffer
         self.client.cef(name, severity, self.environ, self.config, *args, **kw)
-        msgs = self.client.sender.msgs
+        msgs = self.client.sender.stream.msgs
 
-        msg = json.loads(msgs[0])
+        # Need to strip out protobuf header of 8 bytes
+        msg = json.loads(msgs[0][8:])
+
         msgs.clear()
         # We only care about the CEF payload
         assert msg['type'] == 'cef'
@@ -116,7 +118,7 @@ class TestMetlog(unittest.TestCase):
 
     def test_use_of_constant(self):
         content = self._log('xx', 5,
-                signature=metlog_cef.AUTH_FAILURE)
+                signature=heka_cef.AUTH_FAILURE)
         assert '|AuthFail|' in content
 
 
@@ -127,17 +129,17 @@ class TestExtraConfig(unittest.TestCase):
     def test_config(self):
 
         cfg_txt = """
-        [metlog]
-        sender_class=metlog.senders.DebugCaptureSender
+        [heka]
+        stream_class = heka.senders.DebugCaptureSender
 
-        [metlog_plugin_cef]
-        provider=metlog_cef.cef_plugin:config_plugin
+        [heka_plugin_cef]
+        provider=heka_cef.cef_plugin:config_plugin
         syslog_options=PID,NDELAY
         syslog_facility=KERN
         syslog_ident=some_identifier
         syslog_priority=EMERG
         """
-        client = client_from_text_config(cfg_txt, 'metlog')
+        client = client_from_text_config(cfg_txt, 'heka')
         expected = {'syslog_priority': 'EMERG',
                     'syslog_ident': 'some_identifier',
                     'syslog_facility': 'KERN',
@@ -147,11 +149,11 @@ class TestExtraConfig(unittest.TestCase):
     @raises(InvalidArgumentError)
     def test_bad_option(self):
         cfg_txt = """
-        [metlog]
-        sender_class=metlog.senders.DebugCaptureSender
+        [heka]
+        stream_class = heka.senders.DebugCaptureSender
 
-        [metlog_plugin_cef]
-        provider=metlog_cef.cef_plugin:config_plugin
+        [heka_plugin_cef]
+        provider=heka_cef.cef_plugin:config_plugin
         syslog_options=PIDBAD
         """
-        client_from_text_config(cfg_txt, 'metlog')
+        client_from_text_config(cfg_txt, 'heka')

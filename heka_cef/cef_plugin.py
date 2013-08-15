@@ -11,7 +11,7 @@
 #   Victor Ng (vng@mozilla.com)
 #
 # ***** END LICENSE BLOCK *****
-METLOG_METHOD_NAME = 'cef'
+HEKA_METHOD_NAME = 'cef'
 
 VALID_FACILITY = ['KERN', 'USER', 'MAIL', 'DAEMON', 'AUTH', 'LPR',
 'NEWS', 'UUCP', 'CRON', 'LOCAL0', 'LOCAL1', 'LOCAL2', 'LOCAL3',
@@ -61,10 +61,10 @@ def config_plugin(config):
     """
     CEF requires no special configuration
     """
-    syslog_options = config.pop('syslog_options', None)
-    syslog_facility = config.pop('syslog_facility', None)
-    syslog_ident = config.pop('syslog_ident', None)
-    syslog_priority = config.pop('syslog_priority', None)
+    syslog_options = config.pop('syslog_options', "")
+    syslog_facility = config.pop('syslog_facility', "")
+    syslog_ident = config.pop('syslog_ident', "")
+    syslog_priority = config.pop('syslog_priority', "")
 
     check_config(syslog_options, syslog_facility, syslog_ident,
             syslog_priority)
@@ -81,7 +81,7 @@ def config_plugin(config):
 
     def log_cef(self, name, severity, environ, config, username='none',
                 signature=None, **kw):
-        """Creates a CEF record, and emit it to metlog in the fields blob.
+        """Creates a CEF record, and emit it to heka in the fields blob.
 
         Args:
             - name: name to log
@@ -98,11 +98,11 @@ def config_plugin(config):
                 username=username, signature=signature, **kw)
         msg = _format_msg(fields, kw)
 
-        self.metlog(type='cef', payload=msg, fields={'cef_meta': cef_meta})
+        self.heka(type='cef', payload=msg, fields={'cef_meta': cef_meta})
 
         # Return the formatted message
         return msg
-    log_cef.metlog_name = METLOG_METHOD_NAME
+    log_cef.heka_name = HEKA_METHOD_NAME
     log_cef.cef_meta = cef_meta
 
     return log_cef

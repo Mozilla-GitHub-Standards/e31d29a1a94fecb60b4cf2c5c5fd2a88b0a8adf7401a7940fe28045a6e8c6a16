@@ -1,1 +1,1 @@
-metlog-py>=0.9.7
+heka-py>=0.10
