@@ -11,57 +11,30 @@
 #   Victor Ng (vng@mozilla.com)
 #
 # ***** END LICENSE BLOCK *****
-from metlog.client_ext import log_cef
+from heka.config import client_from_text_config
+import heka_cef
 import unittest
+import json
 from cef import logger
-
-from metlog.client import MetlogClient
-from metlog.senders import DebugCaptureSender
-from metlog.client import setup_client
-
-try:
-    import simplejson as json
-except ImportError:
-    import json  # NOQA
+from nose.tools import raises, eq_
+from heka_cef.cef_plugin import InvalidArgumentError
 
 
-class TestClientSetup(unittest.TestCase):
-    def test_setup(self):
-        simple_client = setup_client('metlog.senders.DebugCaptureSender')
-        assert isinstance(simple_client, MetlogClient)
-        assert isinstance(simple_client.sender, DebugCaptureSender)
-
-    def test_setup_extensions(self):
-        simple_client = setup_client( \
-                'metlog.senders.DebugCaptureSender',
-                extensions={'cef': 'metlog.client_ext.log_cef'})
-
-        assert isinstance(simple_client, MetlogClient)
-        assert isinstance(simple_client.sender, DebugCaptureSender)
-        #assert simple_client.sender._kwargs == {'foo': 'bar'}
-        assert hasattr(simple_client, 'cef')
-
-
-class TestBasicProxy(unittest.TestCase):
-    def test_double_overload(self):
-        self.logger = setup_client(\
-                'metlog.senders.DebugCaptureSender',
-                extensions={'cef': 'metlog.client_ext.log_cef'})
-
-        try:
-            self.logger.add_method('cef', log_cef)
-            msg = 'Should not have succeded with this extension'
-            raise AssertionError(msg)
-        except SyntaxError, se:
-            assert "already bound" in str(se)
-
-
-class TestCEFLogger(unittest.TestCase):
-    """
-    These test cases were ported from the cef library
-    """
+class TestHeka(unittest.TestCase):
+    logger = 'tests'
 
     def setUp(self):
+
+        cfg_txt = """
+        [heka]
+        stream_class = heka.streams.DebugCaptureStream
+
+        [heka_plugin_cef]
+        provider=heka_cef.cef_plugin:config_plugin
+        """
+        ###
+        self.client = client_from_text_config(cfg_txt, 'heka')
+
         self.environ = {'REMOTE_ADDR': '127.0.0.1', 'HTTP_HOST': '127.0.0.1',
                         'PATH_INFO': '/', 'REQUEST_METHOD': 'GET',
                         'HTTP_USER_AGENT': 'MySuperBrowser'}
@@ -69,10 +42,6 @@ class TestCEFLogger(unittest.TestCase):
         self.config = {'cef.version': '0', 'cef.vendor': 'mozilla',
                        'cef.device_version': '3', 'cef.product': 'weave',
                        'cef': True}
-
-        self.logger = setup_client(\
-                'metlog.senders.DebugCaptureSender',
-                extensions={'cef': 'metlog.client_ext.log_cef'})
 
         self._warn = []
 
@@ -85,16 +54,21 @@ class TestCEFLogger(unittest.TestCase):
     def tearDown(self):
         logger.warning = self.old_logger
 
-    def _log(self, name, severity, *args, **kw):
-        # Capture the output from metlog and clear the internal debug buffer
-        self.logger.cef(name, severity, self.environ, self.config, *args, **kw)
-        msgs = self.logger.sender.msgs
+    def test_setup_extensions(self):
+        assert hasattr(self.client, 'cef')
 
-        msg = json.loads(msgs[0])
+    def _log(self, name, severity, *args, **kw):
+        # Capture the output from heka and clear the internal debug buffer
+        self.client.cef(name, severity, self.environ, self.config, *args, **kw)
+        msgs = self.client.sender.stream.msgs
+
+        # Need to strip out protobuf header of 8 bytes
+        msg = json.loads(msgs[0][8:])
+
         msgs.clear()
         # We only care about the CEF payload
         assert msg['type'] == 'cef'
-        return msg['fields']['logtext']
+        return msg['payload']
 
     def test_cef_logging(self):
         # should not fail
@@ -141,3 +115,45 @@ class TestCEFLogger(unittest.TestCase):
     def test_default_signature(self):
         content = self._log('xx', 5)
         self.assertTrue('xx|xx' in content)
+
+    def test_use_of_constant(self):
+        content = self._log('xx', 5,
+                signature=heka_cef.AUTH_FAILURE)
+        assert '|AuthFail|' in content
+
+
+class TestExtraConfig(unittest.TestCase):
+
+    logger = 'tests'
+
+    def test_config(self):
+
+        cfg_txt = """
+        [heka]
+        stream_class = heka.streams.DebugCaptureStream
+
+        [heka_plugin_cef]
+        provider=heka_cef.cef_plugin:config_plugin
+        syslog_options=PID,NDELAY
+        syslog_facility=KERN
+        syslog_ident=some_identifier
+        syslog_priority=EMERG
+        """
+        client = client_from_text_config(cfg_txt, 'heka')
+        expected = {'syslog_priority': 'EMERG',
+                    'syslog_ident': 'some_identifier',
+                    'syslog_facility': 'KERN',
+                    'syslog_options': 'PID,NDELAY'}
+        eq_(client.cef.cef_meta, expected)
+
+    @raises(InvalidArgumentError)
+    def test_bad_option(self):
+        cfg_txt = """
+        [heka]
+        stream_class = heka.streams.DebugCaptureStream
+
+        [heka_plugin_cef]
+        provider=heka_cef.cef_plugin:config_plugin
+        syslog_options=PIDBAD
+        """
+        client_from_text_config(cfg_txt, 'heka')

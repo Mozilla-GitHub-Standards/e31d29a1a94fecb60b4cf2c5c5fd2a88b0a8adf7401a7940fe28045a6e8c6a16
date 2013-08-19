@@ -16,29 +16,29 @@
 import os
 from setuptools import setup, find_packages
 
-version = '0.2'
+version = '0.3'
 
 here = os.path.abspath(os.path.dirname(__file__))
 with open(os.path.join(here, 'README.rst')) as f:
     README = f.read()
 
-setup(name='metlog-cef',
+setup(name='heka-cef',
       version=version,
       description="CEF extensions to metrics logging",
       long_description=README,
       classifiers=[
           'License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)',
           ],
-      keywords='metlog metrics logging client',
+      keywords='heka metrics logging client cef',
       author='Victor Ng',
       author_email='vng@mozilla.com',
-      url='https://github.com/mozilla-services/metlog-cef',
+      url='https://github.com/mozilla-services/heka-cef',
       license='MPLv2.0',
       packages=find_packages(),
       include_package_data=True,
       zip_safe=False,
       install_requires=[
-          'metlog-py',
+          'heka-py>=0.30.1',
           'cef',
           ],
       extras_require={
