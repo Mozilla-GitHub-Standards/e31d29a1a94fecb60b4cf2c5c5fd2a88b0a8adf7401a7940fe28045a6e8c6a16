@@ -27,7 +27,7 @@ class TestHeka(unittest.TestCase):
 
         cfg_txt = """
         [heka]
-        stream_class = heka.senders.DebugCaptureSender
+        stream_class = heka.streams.DebugCaptureStream
 
         [heka_plugin_cef]
         provider=heka_cef.cef_plugin:config_plugin
@@ -130,7 +130,7 @@ class TestExtraConfig(unittest.TestCase):
 
         cfg_txt = """
         [heka]
-        stream_class = heka.senders.DebugCaptureSender
+        stream_class = heka.streams.DebugCaptureStream
 
         [heka_plugin_cef]
         provider=heka_cef.cef_plugin:config_plugin
@@ -150,7 +150,7 @@ class TestExtraConfig(unittest.TestCase):
     def test_bad_option(self):
         cfg_txt = """
         [heka]
-        stream_class = heka.senders.DebugCaptureSender
+        stream_class = heka.streams.DebugCaptureStream
 
         [heka_plugin_cef]
         provider=heka_cef.cef_plugin:config_plugin
