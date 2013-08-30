@@ -27,7 +27,7 @@ class TestHeka(unittest.TestCase):
 
         cfg_txt = """
         [heka]
-        stream_class = heka.senders.DebugCaptureSender
+        stream_class = heka.streams.DebugCaptureStream
 
         [heka_plugin_cef]
         provider=heka_cef.cef_plugin:config_plugin
@@ -60,7 +60,7 @@ class TestHeka(unittest.TestCase):
     def _log(self, name, severity, *args, **kw):
         # Capture the output from heka and clear the internal debug buffer
         self.client.cef(name, severity, self.environ, self.config, *args, **kw)
-        msgs = self.client.sender.stream.msgs
+        msgs = self.client.stream.msgs
 
         # Need to strip out protobuf header of 8 bytes
         msg = json.loads(msgs[0][8:])
@@ -130,7 +130,7 @@ class TestExtraConfig(unittest.TestCase):
 
         cfg_txt = """
         [heka]
-        stream_class = heka.senders.DebugCaptureSender
+        stream_class = heka.streams.DebugCaptureStream
 
         [heka_plugin_cef]
         provider=heka_cef.cef_plugin:config_plugin
@@ -150,7 +150,7 @@ class TestExtraConfig(unittest.TestCase):
     def test_bad_option(self):
         cfg_txt = """
         [heka]
-        stream_class = heka.senders.DebugCaptureSender
+        stream_class = heka.streams.DebugCaptureStream
 
         [heka_plugin_cef]
         provider=heka_cef.cef_plugin:config_plugin
