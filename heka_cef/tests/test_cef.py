@@ -13,8 +13,8 @@
 # ***** END LICENSE BLOCK *****
 from heka.config import client_from_text_config
 import heka_cef
+from heka.tests.helpers import decode_message
 import unittest
-import json
 from cef import logger
 from nose.tools import raises, eq_
 from heka_cef.cef_plugin import InvalidArgumentError
@@ -63,12 +63,12 @@ class TestHeka(unittest.TestCase):
         msgs = self.client.stream.msgs
 
         # Need to strip out protobuf header of 8 bytes
-        msg = json.loads(msgs[0][8:])
+        h, msg = decode_message(msgs[0])
 
         msgs.clear()
         # We only care about the CEF payload
-        assert msg['type'] == 'cef'
-        return msg['payload']
+        assert msg.type == 'cef'
+        return msg.payload
 
     def test_cef_logging(self):
         # should not fail
