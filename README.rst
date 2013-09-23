@@ -1,7 +1,4 @@
-========
-heka-cef
-========
+This repository is deprecated and has been moved to 
+`heka-py-cef <http://github.com/mozilla-services/heka-py-cef>`_.
 
-heka-cef is a plugin extension for `Heka-py
-<http://github.com/mozilla-services/heka-py>`.  heka-cef
-provides an extension to log send CEF messages to a hekad server.
+
